@@ -40,6 +40,7 @@ FocusPageDelay := 1800                        ; ms to wait for the login page to
 ; screen resolution changes, so only use on a fixed setup.
 UsernameFieldX := ""
 UsernameFieldY := ""
+TabTitleMatch := "Chrono"                      ; text that appears in the DrChrono tab title (used to confirm it's really open)
 ; ------------------------------------------
 
 global gGui, gSide, gBP, gDate
@@ -178,26 +179,43 @@ F1::OpenDrChrono()
 }
 
 OpenDrChrono() {
-    global DrChronoURL, ChromeProfile, FocusPageDelay, UsernameFieldX, UsernameFieldY
+    global TabTitleMatch
+    ; If Chrome is already running, jump to the first tab -- that's where DrChrono lives.
+    if hwnd := WinExist("ahk_exe chrome.exe") {
+        WinActivate("ahk_id " hwnd)
+        WinWaitActive("ahk_id " hwnd, , 2)
+        Send("^1")                       ; Chrome shortcut: select the first tab
+        Sleep(200)
+        if InStr(WinGetTitle("A"), TabTitleMatch)
+            return                       ; DrChrono is already up -- nothing more to do
+        ; first tab isn't DrChrono (tab was closed): open it as a new tab in this window
+        if LaunchChrome()
+            FocusUsernameField()
+        return
+    }
+    ; Chrome isn't running -> open it fresh.
+    if LaunchChrome()
+        FocusUsernameField()
+}
+
+LaunchChrome() {
+    global DrChronoURL, ChromeProfile
     profileArg := (ChromeProfile != "") ? ' --profile-directory="' ChromeProfile '"' : ""
     args := profileArg ' "' DrChronoURL '"'
-
-    launched := false
     for exe in ["chrome.exe"
               , "C:\Program Files\Google\Chrome\Application\chrome.exe"
               , "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"] {
         try {
             Run((InStr(exe, "\") ? '"' exe '"' : exe) args)
-            launched := true
-            break
+            return true
         }
     }
-    if !launched {
-        MsgBox("Couldn't find chrome.exe. Edit the path in OpenDrChrono().", "Scan Naming Helper")
-        return
-    }
+    MsgBox("Couldn't find chrome.exe. Edit the path in LaunchChrome().", "Scan Naming Helper")
+    return false
+}
 
-    ; wait for the page, then put the cursor in the username field
+FocusUsernameField() {
+    global FocusPageDelay, UsernameFieldX, UsernameFieldY
     if WinWaitActive("ahk_exe chrome.exe", , 10)
         Sleep(FocusPageDelay)
     if (UsernameFieldX != "" && UsernameFieldY != "")
