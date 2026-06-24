@@ -38,8 +38,8 @@ FocusPageDelay := 1800                        ; ms to wait for the login page to
 ; To set them: run AutoHotkey's "Window Spy", hover the username box, read the
 ; "Screen" X,Y, and paste below. NOTE: these break if the window moves or the
 ; screen resolution changes, so only use on a fixed setup.
-UsernameFieldX := ""
-UsernameFieldY := ""
+UsernameFieldX := 557
+UsernameFieldY := 515
 TabTitleMatch := "Chrono"                      ; text that appears in the DrChrono tab title (used to confirm it's really open)
 ; ------------------------------------------
 
