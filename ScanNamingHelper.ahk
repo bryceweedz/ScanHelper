@@ -25,10 +25,21 @@
 ; ============================================================
 
 ; ---------------- SETTINGS ----------------
-SanitizeForFilename := false   ; true  = replace "/" with "-" in the date (Windows file-name safe)
+SanitizeForFilename := true   ; true  = replace "/" with "-" in the date (Windows file-name safe)
                               ; false = leave the date exactly as typed (e.g. an EMR field that allows "/")
 Suffix := "-BW"               ; trailing tag on every name
 BodyParts := ["Knee","Hip","Shoulder","Ankle","Foot","Hand","Wrist","Elbow","Spine","Femur","Tibia","Humerus","Clavicle"]
+
+DrChronoURL  := "https://app.drchrono.com/"   ; DrChrono web login page
+ChromeProfile := ""                           ; leave "" for default; or e.g. "Profile 1" for a specific Chrome profile
+FocusPageDelay := 1800                        ; ms to wait for the login page to load
+; OPTIONAL: click the username field after load so the iCloud popup appears.
+; Leave both at "" to rely on the page auto-focusing the field (most reliable).
+; To set them: run AutoHotkey's "Window Spy", hover the username box, read the
+; "Screen" X,Y, and paste below. NOTE: these break if the window moves or the
+; screen resolution changes, so only use on a fixed setup.
+UsernameFieldX := ""
+UsernameFieldY := ""
 ; ------------------------------------------
 
 global gGui, gSide, gBP, gDate
@@ -155,3 +166,56 @@ Flash(msg) {
 {
     Emit("insurance")
 }
+
+; ---------------- OPEN DRCHRONO ----------------
+;  Opens the DrChrono login page in Chrome.  It does NOT enter your
+;  password -- let Chrome's password manager (or your clinic's password
+;  manager) autofill that.  See the note at the bottom of this file.
+F1::OpenDrChrono()
+:*:/dc::
+{
+    OpenDrChrono()
+}
+
+OpenDrChrono() {
+    global DrChronoURL, ChromeProfile, FocusPageDelay, UsernameFieldX, UsernameFieldY
+    profileArg := (ChromeProfile != "") ? ' --profile-directory="' ChromeProfile '"' : ""
+    args := profileArg ' "' DrChronoURL '"'
+
+    launched := false
+    for exe in ["chrome.exe"
+              , "C:\Program Files\Google\Chrome\Application\chrome.exe"
+              , "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"] {
+        try {
+            Run((InStr(exe, "\") ? '"' exe '"' : exe) args)
+            launched := true
+            break
+        }
+    }
+    if !launched {
+        MsgBox("Couldn't find chrome.exe. Edit the path in OpenDrChrono().", "Scan Naming Helper")
+        return
+    }
+
+    ; wait for the page, then put the cursor in the username field
+    if WinWaitActive("ahk_exe chrome.exe", , 10)
+        Sleep(FocusPageDelay)
+    if (UsernameFieldX != "" && UsernameFieldY != "")
+        Click(UsernameFieldX " " UsernameFieldY)   ; focuses the field -> iCloud popup appears
+    ; (If left blank, the login page's own auto-focus puts the cursor in the field.)
+}
+
+; ============================================================
+;  ABOUT THE LOGIN
+;  ------------------------------------------------------------
+;  This macro intentionally stops at the login page. Storing a
+;  DrChrono password in this file would put PHI-system credentials
+;  in plain text on disk -- a real security/HIPAA risk.
+;
+;  Fast + safe ways to fill the password from the keyboard:
+;    * Chrome's built-in password manager: save the login once, then
+;      it offers to fill automatically. Press Enter to accept.
+;    * A password manager (1Password, Bitwarden, etc.) with a global
+;      fill shortcut (e.g. Ctrl+Shift+L in Bitwarden) -- one keystroke,
+;      encrypted at rest, and shareable across staff the right way.
+; ============================================================
